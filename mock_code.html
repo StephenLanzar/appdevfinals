@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Certificate Reservation System</title>
+<style>
+  /* Reset and base */
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+  body {
+    margin: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: #fff;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 2rem;
+  }
+  .container {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    max-width: 600px;
+    width: 100%;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.37);
+    padding: 2rem;
+  }
+  h1 {
+    text-align: center;
+    margin-bottom: 1.5rem;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+  }
+  form {
+    display: grid;
+    grid-gap: 1.25rem;
+  }
+  label {
+    font-weight: 600;
+    margin-bottom: 0.3rem;
+    display: block;
+  }
+  select, input[type="text"], input[type="email"], input[type="date"], input[type="time"] {
+    width: 100%;
+    padding: 0.6rem 0.9rem;
+    border-radius: 8px;
+    border: none;
+    font-size: 1rem;
+    outline: none;
+    transition: box-shadow 0.3s ease;
+  }
+  select:focus, input[type="text"]:focus, input[type="email"]:focus, input[type="date"]:focus, input[type="time"]:focus {
+    box-shadow: 0 0 8px 2px #a29bfe;
+  }
+  button {
+    background-color: #6c5ce7;
+    border: none;
+    padding: 0.75rem;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: white;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+  button:hover {
+    background-color: #4834d4;
+  }
+  .reservations {
+    margin-top: 2rem;
+  }
+  .reservations h2 {
+    margin-bottom: 1rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    border-bottom: 2px solid #a29bfe;
+    padding-bottom: 0.5rem;
+  }
+  .reservation-item {
+    background-color: rgba(255,255,255,0.15);
+    padding: 1rem;
+    border-radius: 12px;
+    margin-bottom: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .reservation-info {
+    flex: 1;
+  }
+  .reservation-info p {
+    margin: 0.2rem 0;
+  }
+  .cancel-btn {
+    background-color: #d63031;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 12px;
+    font-weight: 600;
+    color: white;
+    cursor: pointer;
+    transition: background-color 0.25s ease;
+    margin-left: 1rem;
+  }
+  .cancel-btn:hover {
+    background-color: #b71c1c;
+  }
+
+  @media (max-width: 480px) {
+    .reservation-item {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    .cancel-btn {
+      margin: 1rem 0 0 0;
+    }
+  }
+</style>
+</head>
+<body>
+  <div class="container" role="main">
+    <h1>Certificate Reservation System</h1>
+    <form id="reservationForm" aria-label="Certificate reservation form">
+      <div>
+        <label for="fullName">Full Name <sup aria-label="required">*</sup></label>
+        <input type="text" id="fullName" name="fullName" placeholder="Your full name" required />
+      </div>
+      <div>
+        <label for="email">Email <sup aria-label="required">*</sup></label>
+        <input type="email" id="email" name="email" placeholder="you@example.com" required />
+      </div>
+      <div>
+        <label for="certificateType">Certificate Type <sup aria-label="required">*</sup></label>
+        <select id="certificateType" name="certificateType" required>
+          <option value="" disabled selected>Select certificate</option>
+          <option value="COG">Certificate of Grades (COG)</option>
+          <option value="COR">Certificate of Enrollment (COR)</option>
+        </select>
+      </div>
+      <div>
+        <label for="reservationDate">Reservation Date <sup aria-label="required">*</sup></label>
+        <input type="date" id="reservationDate" name="reservationDate" required />
+      </div>
+      <div>
+        <label for="reservationTime">Reservation Time <sup aria-label="required">*</sup></label>
+        <input type="time" id="reservationTime" name="reservationTime" required />
+      </div>
+      <button type="submit" aria-label="Submit reservation">Reserve Certificate</button>
+    </form>
+
+    <section id="reservations" class="reservations" aria-live="polite" aria-atomic="true" aria-relevant="additions removals">
+      <h2>Your Reservations</h2>
+      <div id="reservationList">
+        <!-- Reservation entries here -->
+      </div>
+    </section>
+  </div>
+
+<script>
+  (function(){
+    const form = document.getElementById('reservationForm');
+    const reservationList = document.getElementById('reservationList');
+    const STORAGE_KEY = 'certificateReservations';
+
+    // Load reservations from localStorage
+    function loadReservations() {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      return stored ? JSON.parse(stored) : [];
+    }
+
+    // Save reservations to localStorage
+    function saveReservations(reservations) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(reservations));
+    }
+
+    // Render the reservations list
+    function renderReservations() {
+      const reservations = loadReservations();
+      reservationList.innerHTML = '';
+
+      if (reservations.length === 0) {
+        reservationList.innerHTML = '<p>No reservations yet.</p>';
+        return;
+      }
+
+      reservations.forEach((res, index) => {
+        const div = document.createElement('div');
+        div.className = 'reservation-item';
+        div.setAttribute('data-index', index);
+
+        const info = document.createElement('div');
+        info.className = 'reservation-info';
+
+        info.innerHTML = `
+          <p><strong>Name:</strong> ${escapeHTML(res.fullName)}</p>
+          <p><strong>Email:</strong> ${escapeHTML(res.email)}</p>
+          <p><strong>Certificate:</strong> ${res.certificateType === 'COG' ? 'Certificate of Grades (COG)' : 'Certificate of Enrollment (COR)'}</p>
+          <p><strong>Date:</strong> ${escapeHTML(res.reservationDate)}</p>
+          <p><strong>Time:</strong> ${escapeHTML(res.reservationTime)}</p>
+        `;
+
+        const cancelBtn = document.createElement('button');
+        cancelBtn.className = 'cancel-btn';
+        cancelBtn.textContent = 'Cancel';
+        cancelBtn.setAttribute('aria-label', `Cancel reservation for ${res.certificateType} on ${res.reservationDate} at ${res.reservationTime}`);
+        cancelBtn.addEventListener('click', () => {
+          cancelReservation(index);
+        });
+
+        div.appendChild(info);
+        div.appendChild(cancelBtn);
+        reservationList.appendChild(div);
+      });
+    }
+
+    // Escaping HTML to avoid XSS
+    function escapeHTML(text) {
+      const p = document.createElement('p');
+      p.textContent = text;
+      return p.innerHTML;
+    }
+
+    // Cancel a reservation by index
+    function cancelReservation(index) {
+      let reservations = loadReservations();
+      reservations.splice(index, 1);
+      saveReservations(reservations);
+      renderReservations();
+      alert('Reservation canceled.');
+    }
+
+    // Validate date and time to not be in the past
+    function validateDateTime(dateStr, timeStr) {
+      const now = new Date();
+      const selectedDate = new Date(dateStr + 'T' + timeStr);
+      return selectedDate >= now;
+    }
+
+    form.addEventListener('submit', event => {
+      event.preventDefault();
+
+      const fullName = form.fullName.value.trim();
+      const email = form.email.value.trim();
+      const certificateType = form.certificateType.value;
+      const reservationDate = form.reservationDate.value;
+      const reservationTime = form.reservationTime.value;
+
+      // Basic validations
+      if (!fullName) {
+        alert('Please enter your full name.');
+        form.fullName.focus();
+        return;
+      }
+      if (!email || !/\S+@\S+\.\S+/.test(email)) {
+        alert('Please enter a valid email address.');
+        form.email.focus();
+        return;
+      }
+      if (!certificateType) {
+        alert('Please select a certificate type.');
+        form.certificateType.focus();
+        return;
+      }
+      if (!reservationDate) {
+        alert('Please select a reservation date.');
+        form.reservationDate.focus();
+        return;
+      }
+      if (!reservationTime) {
+        alert('Please select a reservation time.');
+        form.reservationTime.focus();
+        return;
+      }
+
+      if (!validateDateTime(reservationDate, reservationTime)) {
+        alert('Reservation date and time cannot be in the past.');
+        form.reservationDate.focus();
+        return;
+      }
+
+      // Save reservation
+      const reservations = loadReservations();
+      reservations.push({
+        fullName,
+        email,
+        certificateType,
+        reservationDate,
+        reservationTime
+      });
+      saveReservations(reservations);
+
+      alert('Your reservation has been saved.');
+
+      form.reset();
+      renderReservations();
+    });
+
+    renderReservations();
+  })();
+</script>
+</body>
+</html>
+
